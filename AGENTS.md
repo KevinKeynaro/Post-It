@@ -1,0 +1,166 @@
+# AGENTS.md
+
+Guidance for AI coding agents working on **Post It**.
+
+## Project overview
+
+Post It is a backend-only REST API built with Express.js. There is **no frontend**; everything is tested with Postman.
+
+Core flow:
+
+- **User:** logs in, receives a JWT, puts it in Postman's Authorization tab (Bearer Token) to be verified.
+- **Admin:** logs in, receives a JWT, can view users (never their passwords) and delete users. Admin routes require a valid JWT and the `admin` role.
+
+The assignment does not clearly say what the CRUD and the Cloudinary image upload should apply to. Working assumption (not confirmed):
+
+- CRUD applies to **users** (and optionally **posts**).
+- Cloudinary is used for an **image upload** (user avatar and/or post image).
+
+If the assignment is clarified, update this section first.
+
+## Tech stack
+
+- Node.js + Express.js
+- MySQL (run through Laragon, managed with MySQL Workbench), driver: `mysql2/promise`
+- Zod for request validation
+- JSON Web Tokens (`jsonwebtoken`) for auth
+- `bcrypt` for password hashing
+- Cloudinary (+ `multer` for multipart parsing) for image uploads
+- `dotenv` for configuration
+
+## Commands
+
+```bash
+npm install          # install dependencies
+npm run dev          # start with nodemon (add this script if missing)
+npm start            # node src/app.js
+```
+
+Database: start Laragon (Start All) so MySQL is running, then use MySQL Workbench on `127.0.0.1:3306`.
+
+## Folder structure
+
+```
+Post It/
+├── src/
+│   ├── app.js            # express setup, route mounting, error handler
+│   ├── config/           # cloudinary.js (planned)
+│   ├── db/
+│   │   └── connection.js # mysql2 pool (done)
+│   ├── validations/      # Zod schemas (planned)
+│   ├── middleWares/      # verifyToken, isAdmin, validate, upload
+│   ├── controllers/      # auth, user, admin (and post if needed)
+│   └── routes/           # auth.routes, user.routes, admin.routes
+├── AGENTS.md
+├── README.md
+├── package.json
+└── .env                  # never commit
+```
+
+Note: the middleware folder is spelled `middleWares` (capital W). Keep that spelling in imports.
+
+## Environment variables (`.env`)
+
+```
+PORT=3000
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=
+DB_NAME=post_it
+JWT_SECRET=<long random string>
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+```
+
+Never commit `.env` or print secrets in logs.
+
+## Database schema
+
+Database: `post_it`
+
+```sql
+CREATE TABLE users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  password VARCHAR(255) NOT NULL,          -- bcrypt hash
+  role ENUM('user', 'admin') NOT NULL DEFAULT 'user',
+  avatar_url VARCHAR(500) NULL,            -- Cloudinary secure_url
+  avatar_public_id VARCHAR(255) NULL,      -- used to delete the Cloudinary image
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE posts (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  title VARCHAR(150) NOT NULL,
+  content TEXT,
+  image_url VARCHAR(500) NULL,
+  image_public_id VARCHAR(255) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+```
+
+The admin account is created manually in MySQL Workbench (an INSERT with a bcrypt hash), because registration always creates role `user`.
+
+## Planned API
+
+Auth (public)
+- `POST /auth/register` - Zod validation, bcrypt hash, role forced to `user`
+- `POST /auth/login` - verify password, return JWT containing `id` and `role`
+
+User (JWT required)
+- `GET /users/me`
+- `PUT /users/me`
+- `POST /users/me/avatar` - upload image to Cloudinary, save `avatar_url` and `avatar_public_id`
+- `DELETE /users/me` (optional)
+
+Admin (JWT + admin role)
+- `GET /admin/users` - list users, **password excluded**
+- `GET /admin/users/:id` - one user, **password excluded**
+- `DELETE /admin/users/:id` - delete user and their Cloudinary image(s)
+
+Posts (optional, only if the assignment needs them)
+- Standard CRUD under `/posts`, with an optional image upload to Cloudinary.
+
+## Conventions
+
+- Language: JavaScript, CommonJS (`require` / `module.exports`). If `package.json` has `"type": "module"`, switch to ES modules consistently.
+- Use the shared pool from `src/db/connection.js`; always use parameterized queries (`?` placeholders), never string-concatenated SQL.
+- Validate every request body with Zod through the `validate` middleware.
+- Never return the `password` column in any response. Select columns explicitly instead of `SELECT *` on `users`.
+- JWT is read from the `Authorization: Bearer <token>` header. `verifyToken` sets `req.user = { id, role }`; `isAdmin` checks `req.user.role === 'admin'`.
+- Use consistent JSON responses and proper status codes (400 validation, 401 no/invalid token, 403 not admin, 404 not found, 409 duplicate email).
+- Handle errors with a central error-handling middleware in `app.js`.
+- Keep controllers thin and readable; this is a student assignment, so prefer simple, well-commented code over abstractions.
+
+## Current status
+
+Done
+- MySQL database and schema designed (`users`, `posts`)
+- `src/db/connection.js` (mysql2 pool)
+- `.env` template
+- `multer` & `nodemon` terpasang, script `npm run dev` ditambahkan
+- `src/app.js` (express setup, json parsing, central error handler, temporary endpoint `GET /health`)
+
+Next steps
+1. Zod schemas (`src/validations/auth.schema.js`), `validate` middleware (`src/middleWares/validate.js`)
+2. `POST /auth/register` and `POST /auth/login`
+3. `verifyToken` and `isAdmin` middleware
+4. User routes, then admin routes
+5. Cloudinary config, `multer` upload middleware, avatar/image endpoint
+6. Test everything in Postman (register, login, protected route with Bearer token, admin-only routes with a normal user token should return 403)
+
+## Testing
+
+Manual testing with Postman. For protected routes, set Authorization to Bearer Token and paste the JWT from the login response.
+
+## Do not
+
+- Do not add a frontend.
+- Do not commit `.env` or hard-code secrets.
+- Do not expose password hashes in any endpoint.
+- Do not allow users to set their own `role` via register or update.
