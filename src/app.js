@@ -2,6 +2,11 @@ require("dotenv").config();
 const express = require("express");
 require("./db/connection"); // inisialisasi koneksi MySQL
 
+const authRoutes = require("./routes/auth.routes");
+const adminRoutes = require("./routes/admin.routes");
+const notFound = require("./middleWares/notFound");
+const errorHandler = require("./middleWares/errorHandler");
+
 const app = express();
 
 // Middleware parsing JSON & URL-encoded
@@ -16,27 +21,22 @@ app.get("/health", (req, res) => {
   });
 });
 
-// Route belum ditemukan (404 handler)
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: `Route ${req.originalUrl} tidak ditemukan`,
-  });
-});
+// Routes
+app.use("/auth", authRoutes);
+app.use("/admin", adminRoutes);
+
+// Handler 404 jika route tidak ditemukan
+app.use(notFound);
 
 // Error handler pusat
-app.use((err, req, res, next) => {
-  console.error("Server error:", err.message || err);
-  res.status(err.status || 500).json({
-    success: false,
-    message: err.message || "Terjadi kesalahan pada server",
-  });
-});
+app.use(errorHandler);
 
-// Jalankan server
+// Jalankan server jika dijalankan langsung
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server berjalan di http://localhost:${PORT}`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server berjalan di http://localhost:${PORT}`);
+  });
+}
 
 module.exports = app;

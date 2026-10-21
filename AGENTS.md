@@ -129,6 +129,10 @@ Posts (optional, only if the assignment needs them)
 ## Conventions
 
 - Language: JavaScript, CommonJS (`require` / `module.exports`). If `package.json` has `"type": "module"`, switch to ES modules consistently.
+- Modular code: Setiap middleware, controller, dan schema ditulis di file sendiri, di-export dengan `module.exports`, dan di-require di tempat dipakai.
+- Peran `app.js`: Hanya merakit aplikasi (parser, mounting router, notFound handler, error handler). Tidak ada logika bisnis di `app.js`.
+- Penggunaan middleware: Middleware seperti `verifyToken` dan `isAdmin` dipasang di file route, bukan di `app.js`.
+- Prinsip pakai-ulang (reusability): Tulis logika berulang (verifyToken, isAdmin, validate, upload, Cloudinary cleanup) satu kali di file khusus, lalu require. Hindari duplikasi logika.
 - Use the shared pool from `src/db/connection.js`; always use parameterized queries (`?` placeholders), never string-concatenated SQL.
 - Validate every request body with Zod through the `validate` middleware.
 - Never return the `password` column in any response. Select columns explicitly instead of `SELECT *` on `users`.
@@ -142,17 +146,24 @@ Posts (optional, only if the assignment needs them)
 Done
 - MySQL database and schema designed (`users`, `posts`)
 - `src/db/connection.js` (mysql2 pool)
-- `.env` template
+- `.env` template dan `.gitignore` (.env terlindungi)
+- `package.json` entry point diarahkan ke `src/app.js`
 - `multer` & `nodemon` terpasang, script `npm run dev` ditambahkan
-- `src/app.js` (express setup, json parsing, central error handler, temporary endpoint `GET /health`)
+- `src/app.js` (express setup, json parsing, central error handling, 404 handler berbahasa Inggris)
+- Zod schemas (`src/validations/auth.schema.js`) dengan sanitasi email (trim & lowercase) dan batasan password (6-72 char)
+- Middleware `validate.js`
+- Helper pembuatan JWT modular (`src/utils/token.js`)
+- `POST /auth/register` dan `POST /auth/login` (`src/controllers/auth.controller.js` & `src/routes/auth.routes.js`), di-mount di `/auth` pada `src/app.js`
+- `src/middleWares/verifyToken.js` (ekstraksi header Bearer, verifikasi HS256, verifikasi user DB, `req.user` dari DB)
+- `src/middleWares/isAdmin.js` (guard role admin 403 "Admin access required")
+- Middleware `src/middleWares/validateId.js` (validasi parameter :id bilangan bulat positif)
+- Admin routes & controller (`GET /admin/users`, `GET /admin/users/:id`, `DELETE /admin/users/:id`), kolom password & avatar_public_id excluded, proteksi admin delete self, di-mount di `/admin`
+- Rute pengujian sementara `GET /test-auth` dan `GET /test-admin` telah dihapus dari `src/app.js`
 
 Next steps
-1. Zod schemas (`src/validations/auth.schema.js`), `validate` middleware (`src/middleWares/validate.js`)
-2. `POST /auth/register` and `POST /auth/login`
-3. `verifyToken` and `isAdmin` middleware
-4. User routes, then admin routes
-5. Cloudinary config, `multer` upload middleware, avatar/image endpoint
-6. Test everything in Postman (register, login, protected route with Bearer token, admin-only routes with a normal user token should return 403)
+1. User routes (`GET /users/me`, `PUT /users/me`, dll.)
+2. Cloudinary config, `multer` upload middleware, avatar/image endpoint
+3. Test everything in Postman
 
 ## Testing
 
