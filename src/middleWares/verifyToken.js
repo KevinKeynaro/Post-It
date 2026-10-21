@@ -19,7 +19,7 @@ const verifyToken = async (req, res, next) => {
   if (parts.length !== 2 || !parts[1]) {
     return res.status(401).json({
       success: false,
-      message: "Invalid authorization format",
+      message: "Authorization token required",
     });
   }
 
@@ -29,12 +29,6 @@ const verifyToken = async (req, res, next) => {
   try {
     decoded = jwt.verify(token, secret, { algorithms: ["HS256"] });
   } catch (err) {
-    if (err.name === "TokenExpiredError") {
-      return res.status(401).json({
-        success: false,
-        message: "Token expired",
-      });
-    }
     return res.status(401).json({
       success: false,
       message: "Invalid token",

@@ -134,9 +134,10 @@ Posts (optional, only if the assignment needs them)
 - Penggunaan middleware: Middleware seperti `verifyToken` dan `isAdmin` dipasang di file route, bukan di `app.js`.
 - Prinsip pakai-ulang (reusability): Tulis logika berulang (verifyToken, isAdmin, validate, upload, Cloudinary cleanup) satu kali di file khusus, lalu require. Hindari duplikasi logika.
 - Use the shared pool from `src/db/connection.js`; always use parameterized queries (`?` placeholders), never string-concatenated SQL.
-- Validate every request body with Zod through the `validate` middleware.
+- Validate every request body with Zod through the `validate` middleware. `registerSchema` tidak strict (field tak dikenal diabaikan Zod, role dipakemkan 'user' di controller).
+- Parameter `:id` rute diproses langsung oleh prepared statement; id tidak valid atau tidak ditemukan menghasilkan 404 "User not found" (tanpa middleware validateId).
 - Never return the `password` column in any response. Select columns explicitly instead of `SELECT *` on `users`.
-- JWT is read from the `Authorization: Bearer <token>` header. `verifyToken` sets `req.user = { id, role }`; `isAdmin` checks `req.user.role === 'admin'`.
+- JWT is read from the `Authorization: Bearer <token>` header. `verifyToken` memakai pesan tunggal "Invalid token" (baik kedaluwarsa maupun token acak) dan sets `req.user = { id, role }` dari database; `isAdmin` checks `req.user.role === 'admin'`.
 - Use consistent JSON responses and proper status codes (400 validation, 401 no/invalid token, 403 not admin, 404 not found, 409 duplicate email).
 - Handle errors with a central error-handling middleware in `app.js`.
 - Keep controllers thin and readable; this is a student assignment, so prefer simple, well-commented code over abstractions.
@@ -150,15 +151,14 @@ Done
 - `package.json` entry point diarahkan ke `src/app.js`
 - `multer` & `nodemon` terpasang, script `npm run dev` ditambahkan
 - `src/app.js` (express setup, json parsing, central error handling, 404 handler berbahasa Inggris)
-- Zod schemas (`src/validations/auth.schema.js`) dengan sanitasi email (trim & lowercase) dan batasan password (6-72 char)
+- Zod schemas (`src/validations/auth.schema.js`): sanitasi email (trim & lowercase), batasan password (6-72 char), registerSchema non-strict
 - Middleware `validate.js`
 - Helper pembuatan JWT modular (`src/utils/token.js`)
 - `POST /auth/register` dan `POST /auth/login` (`src/controllers/auth.controller.js` & `src/routes/auth.routes.js`), di-mount di `/auth` pada `src/app.js`
-- `src/middleWares/verifyToken.js` (ekstraksi header Bearer, verifikasi HS256, verifikasi user DB, `req.user` dari DB)
+- `src/middleWares/verifyToken.js` (ekstraksi header Bearer, verifikasi HS256 dengan pesan tunggal "Invalid token", verifikasi user DB, `req.user` dari DB)
 - `src/middleWares/isAdmin.js` (guard role admin 403 "Admin access required")
-- Middleware `src/middleWares/validateId.js` (validasi parameter :id bilangan bulat positif)
-- Admin routes & controller (`GET /admin/users`, `GET /admin/users/:id`, `DELETE /admin/users/:id`), kolom password & avatar_public_id excluded, proteksi admin delete self, di-mount di `/admin`
-- Rute pengujian sementara `GET /test-auth` dan `GET /test-admin` telah dihapus dari `src/app.js`
+- Admin routes & controller (`GET /admin/users`, `GET /admin/users/:id`, `DELETE /admin/users/:id`), kolom password & avatar_public_id excluded, proteksi admin delete self, handling id via query prepared statement (404 bila tidak cocok), di-mount di `/admin`
+- Rute pengujian sementara telah dibersihkan dari `src/app.js`
 
 Next steps
 1. User routes (`GET /users/me`, `PUT /users/me`, dll.)
@@ -167,7 +167,17 @@ Next steps
 
 ## Testing
 
-Manual testing with Postman. For protected routes, set Authorization to Bearer Token and paste the JWT from the login response.
+Manual testing with Postman:
+1. `GET /health` -> 200
+2. `POST /auth/register` (user baru dengan body menyertakan `"role":"admin"`) -> 201 (role dipastikan "user", tanpa field password)
+3. `POST /auth/register` dengan email sama -> 409
+4. `POST /auth/login` (user valid) -> 200 dengan token
+5. `POST /auth/login` (password salah) -> 401 "Invalid email or password"
+6. `GET /admin/users` tanpa token -> 401
+7. `GET /admin/users` token user biasa -> 403
+8. `GET /admin/users` token admin -> 200, tanpa password dan tanpa avatar_public_id
+9. `GET /admin/users/9999` dan `GET /admin/users/abc` -> keduanya 404
+10. `DELETE /admin/users/<id>` dengan token admin -> 200, lalu `GET /admin/users` dengan token lama user terhapus -> 401
 
 ## Do not
 
