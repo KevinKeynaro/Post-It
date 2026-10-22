@@ -11,6 +11,14 @@ const errorHandler = (err, req, res, next) => {
     });
   }
 
+  // Tangani error dari multer (misal: ukuran file melebihi limit)
+  if (err.name === "MulterError") {
+    return res.status(400).json({
+      success: false,
+      message: err.message,
+    });
+  }
+
   // Jika error memiliki status code eksplisit (misal 400, 401, 403, 404, 409)
   if (err.status || err.statusCode) {
     const status = err.status || err.statusCode;

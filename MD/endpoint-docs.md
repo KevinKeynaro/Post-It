@@ -4,24 +4,47 @@ Dokumentasi resmi endpoint, skema request body JSON, serta output JSON yang diha
 
 ---
 
-## Ringkasan Konfigurasi & Autentikasi
+## Kesimpulan & Ringkasan Endpoint
+
+Berikut adalah rangkuman seluruh endpoint, hak akses, dan status implementasinya:
+
+| No | HTTP Method | URL Endpoint | Hak Akses | Deskripsi Singkat | Status |
+|:--:|:-----------:|:-------------|:----------|:------------------|:------:|
+| 1 | `GET` | `/health` | Publik | Cek status server berjalan | **Aktif** |
+| 2 | `POST` | `/auth/register` | Publik | Registrasi pengguna baru | **Aktif** |
+| 3 | `POST` | `/auth/login` | Publik | Login & peroleh JWT token | **Aktif** |
+| 4 | `GET` | `/users/me` | Bearer Token (User / Admin) | Mendapatkan profil akun login | **Aktif** |
+| 5 | `POST` | `/users/me/avatar` | Bearer Token (User / Admin) | Upload gambar avatar ke Cloudinary | **Aktif** |
+| 6 | `GET` | `/admin/users` | Bearer Token (Role Admin) | Melihat seluruh daftar pengguna | **Aktif** |
+| 7 | `GET` | `/admin/users/:id` | Bearer Token (Role Admin) | Melihat profil pengguna spesifik | **Aktif** |
+| 8 | `DELETE` | `/admin/users/:id` | Bearer Token (Role Admin) | Menghapus pengguna dari sistem | **Aktif** |
+| 9 | `PUT` | `/users/me` | Bearer Token (User / Admin) | Memperbarui nama/profil akun | *Direncanakan* |
+
+### Statistik Total Endpoint
+- **Total Endpoint Aktif:** 8 Endpoint
+- **Total Endpoint Direncanakan:** 1 Endpoint
+- **Total Keseluruhan:** 9 Endpoint
+
+---
+
+## Konfigurasi Global & Autentikasi
 
 - **Base URL:** `http://localhost:3000`
-- **Content-Type:** `application/json` (kecuali upload file multipart/form-data)
-- **Format Autentikasi:** Bearer Token via Header HTTP
+- **Content-Type:** `application/json` (kecuali upload file menggunakan `multipart/form-data`)
+- **Format Header Autentikasi:**
   ```http
   Authorization: Bearer <jwt_token>
   ```
-- **Struktur Standar Response:**
-  - Sukses:
+- **Format Standar Respon:**
+  - Respon Berhasil:
     ```json
     {
       "success": true,
       "message": "Deskripsi pesan (opsional)",
-      "data": {} // Objek atau Array data
+      "data": {}
     }
     ```
-  - Gagal:
+  - Respon Gagal:
     ```json
     {
       "success": false,
@@ -34,8 +57,9 @@ Dokumentasi resmi endpoint, skema request body JSON, serta output JSON yang diha
 ## 1. Health Check
 
 ### `GET /health`
-Mengecek status dan ketersediaan server API.
+Mengecek status ketersediaan server API.
 
+- **Status:** Aktif
 - **Akses:** Publik
 - **Headers:** Tidak ada
 - **Body:** Tidak ada
@@ -53,8 +77,9 @@ Mengecek status dan ketersediaan server API.
 ## 2. Authentication (`/auth`)
 
 ### `POST /auth/register`
-Mendaftarkan akun baru. Akun yang didaftarkan selalu memiliki role `user`.
+Mendaftarkan akun baru. Role otomatis diatur ke `user`.
 
+- **Status:** Aktif
 - **Akses:** Publik
 - **Headers:** `Content-Type: application/json`
 - **Request Body JSON:**
@@ -66,10 +91,10 @@ Mendaftarkan akun baru. Akun yang didaftarkan selalu memiliki role `user`.
   }
   ```
 - **Validasi Input:**
-  | Field | Tipe | Wajib | Keterangan |
+  | Field | Tipe | Wajib | Aturan Validasi |
   |---|---|---|---|
-  | `name` | string | Ya | Tidak boleh kosong (otomatis di-trim) |
-  | `email` | string | Ya | Format email valid (otomatis di-trim & lowercase) |
+  | `name` | string | Ya | Tidak boleh kosong (auto-trim) |
+  | `email` | string | Ya | Format email valid (auto-trim & lowercase) |
   | `password` | string | Ya | Min. 6 karakter, maks. 72 karakter |
 
 #### Response Sukses (201 Created)
@@ -94,7 +119,7 @@ Mendaftarkan akun baru. Akun yang didaftarkan selalu memiliki role `user`.
     "message": "name: Name cannot be empty; email: Invalid email format; password: Password must be at least 6 characters"
   }
   ```
-- **409 Conflict (Email Sudah Terdaftar)**
+- **409 Conflict (Email Terdaftar)**
   ```json
   {
     "success": false,
@@ -107,6 +132,7 @@ Mendaftarkan akun baru. Akun yang didaftarkan selalu memiliki role `user`.
 ### `POST /auth/login`
 Autentikasi akun untuk memperoleh JWT token.
 
+- **Status:** Aktif
 - **Akses:** Publik
 - **Headers:** `Content-Type: application/json`
 - **Request Body JSON:**
@@ -117,7 +143,7 @@ Autentikasi akun untuk memperoleh JWT token.
   }
   ```
 - **Validasi Input:**
-  | Field | Tipe | Wajib | Keterangan |
+  | Field | Tipe | Wajib | Aturan Validasi |
   |---|---|---|---|
   | `email` | string | Ya | Format email valid |
   | `password` | string | Ya | Tidak boleh kosong |
@@ -128,7 +154,7 @@ Autentikasi akun untuk memperoleh JWT token.
   "success": true,
   "message": "Login successful",
   "data": {
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6InVzZXIiLCJpYXQiOjE2...",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
     "user": {
       "id": 1,
       "name": "Budi Santoso",
@@ -147,7 +173,7 @@ Autentikasi akun untuk memperoleh JWT token.
     "message": "email: Invalid email format"
   }
   ```
-- **401 Unauthorized (Email atau Password Salah)**
+- **401 Unauthorized (Kredensial Salah)**
   ```json
   {
     "success": false,
@@ -157,20 +183,142 @@ Autentikasi akun untuk memperoleh JWT token.
 
 ---
 
-## 3. Admin Routes (`/admin`)
+## 3. User Routes (`/users`)
 
-> **Catatan Keamanan:**
-> - Seluruh rute `/admin` memerlukan Header `Authorization: Bearer <token>` milik akun dengan role `admin`.
-> - Kolom `password` dan `avatar_public_id` tidak pernah ditampilkan pada respon.
+### `GET /users/me`
+Mengambil detail profil akun yang sedang login.
+
+- **Status:** Aktif
+- **Akses:** User & Admin (Perlu JWT)
+- **Headers:** `Authorization: Bearer <token>`
+- **Body:** Tidak ada
+
+#### Response Sukses (200 OK)
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "name": "Budi Santoso",
+    "email": "budi@example.com",
+    "role": "user",
+    "avatar_url": "https://res.cloudinary.com/.../image/upload/.../avatar.jpg",
+    "created_at": "2026-10-22T04:15:30.000Z"
+  }
+}
+```
+
+#### Response Gagal:
+- **401 Unauthorized (Token Tidak Ada / Tidak Valid)**
+  ```json
+  {
+    "success": false,
+    "message": "Authorization token required"
+  }
+  ```
+
+---
+
+### `POST /users/me/avatar`
+Mengunggah file avatar ke Cloudinary, menghapus avatar lama dari Cloudinary (jika ada), dan memperbarui `avatar_url` serta `avatar_public_id` di database.
+
+- **Status:** Aktif
+- **Akses:** User & Admin (Perlu JWT)
+- **Headers:**
+  - `Authorization: Bearer <token>`
+  - `Content-Type: multipart/form-data`
+- **Form Data:**
+  | Key | Tipe | Wajib | Keterangan |
+  |---|---|---|---|
+  | `avatar` | File | Ya | Format: JPEG, JPG, PNG, WEBP. Maks: 2MB |
+
+#### Response Sukses (200 OK)
+```json
+{
+  "success": true,
+  "message": "Avatar uploaded successfully",
+  "data": {
+    "avatar_url": "https://res.cloudinary.com/.../image/upload/v123456/post_it/avatars/sample.jpg"
+  }
+}
+```
+
+#### Response Gagal:
+- **400 Bad Request (File Tidak Ada / Tipe File Tidak Didukung / Ukuran > 2MB)**
+  ```json
+  {
+    "success": false,
+    "message": "Avatar image is required"
+  }
+  ```
+  *atau*
+  ```json
+  {
+    "success": false,
+    "message": "Only image files (jpeg, jpg, png, webp) are allowed"
+  }
+  ```
+  *atau*
+  ```json
+  {
+    "success": false,
+    "message": "File too large"
+  }
+  ```
+- **401 Unauthorized**
+  ```json
+  {
+    "success": false,
+    "message": "Authorization token required"
+  }
+  ```
+
+---
+
+### `PUT /users/me` *(Direncanakan)*
+Memperbarui informasi profil akun yang sedang login.
+
+- **Status:** Direncanakan
+- **Akses:** User & Admin (Perlu JWT)
+- **Headers:**
+  - `Authorization: Bearer <token>`
+  - `Content-Type: application/json`
+- **Request Body JSON:**
+  ```json
+  {
+    "name": "Budi Santoso Update"
+  }
+  ```
+
+#### Response Sukses (200 OK)
+```json
+{
+  "success": true,
+  "message": "Profile updated successfully",
+  "data": {
+    "id": 1,
+    "name": "Budi Santoso Update",
+    "email": "budi@example.com",
+    "role": "user",
+    "avatar_url": null
+  }
+}
+```
+
+---
+
+## 4. Admin Routes (`/admin`)
+
+> **Catatan:**
+> - Semua endpoint `/admin` mewajibkan token dengan role `admin`.
+> - Kolom sensitif `password` dan `avatar_public_id` tidak pernah diekspos dalam respon JSON.
 
 ### `GET /admin/users`
-Mengambil seluruh daftar pengguna yang terdaftar di database.
+Mengambil seluruh daftar pengguna di database.
 
+- **Status:** Aktif
 - **Akses:** Khusus Admin
-- **Headers:**
-  ```http
-  Authorization: Bearer <admin_token>
-  ```
+- **Headers:** `Authorization: Bearer <admin_token>`
 - **Body:** Tidak ada
 
 #### Response Sukses (200 OK)
@@ -191,7 +339,7 @@ Mengambil seluruh daftar pengguna yang terdaftar di database.
       "name": "Budi Santoso",
       "email": "budi@example.com",
       "role": "user",
-      "avatar_url": null,
+      "avatar_url": "https://res.cloudinary.com/.../avatar.jpg",
       "created_at": "2026-10-22T04:15:30.000Z"
     }
   ]
@@ -200,13 +348,6 @@ Mengambil seluruh daftar pengguna yang terdaftar di database.
 
 #### Response Gagal:
 - **401 Unauthorized (Token Kosong atau Tidak Valid)**
-  ```json
-  {
-    "success": false,
-    "message": "Authorization token required"
-  }
-  ```
-  *atau*
   ```json
   {
     "success": false,
@@ -224,13 +365,11 @@ Mengambil seluruh daftar pengguna yang terdaftar di database.
 ---
 
 ### `GET /admin/users/:id`
-Melihat profil detail satu pengguna berdasarkan ID.
+Melihat detail profil salah satu pengguna berdasarkan ID.
 
+- **Status:** Aktif
 - **Akses:** Khusus Admin
-- **Headers:**
-  ```http
-  Authorization: Bearer <admin_token>
-  ```
+- **Headers:** `Authorization: Bearer <admin_token>`
 - **Path Parameters:**
   - `id` (integer, misal: `/admin/users/2`)
 - **Body:** Tidak ada
@@ -262,17 +401,15 @@ Melihat profil detail satu pengguna berdasarkan ID.
 ---
 
 ### `DELETE /admin/users/:id`
-Menghapus akun pengguna berdasarkan ID.
+Menghapus akun pengguna dari database.
 
+- **Status:** Aktif
 - **Akses:** Khusus Admin
-- **Headers:**
-  ```http
-  Authorization: Bearer <admin_token>
-  ```
+- **Headers:** `Authorization: Bearer <admin_token>`
 - **Path Parameters:**
   - `id` (integer, misal: `/admin/users/2`)
 - **Body:** Tidak ada
-- **Aturan Proteksi:** Admin tidak diizinkan menghapus akun miliknya sendiri.
+- **Proteksi:** Admin dilarang menghapus akunnya sendiri.
 
 #### Response Sukses (200 OK)
 ```json
@@ -300,92 +437,12 @@ Menghapus akun pengguna berdasarkan ID.
 
 ---
 
-## 4. User Routes (`/users`) *(Direncanakan)*
-
-Rute profil untuk pengguna yang sedang login (`req.user.id`).
-
-### `GET /users/me`
-Mengambil detail profil akun yang sedang login.
-
-- **Akses:** User & Admin (JWT required)
-- **Headers:** `Authorization: Bearer <token>`
-- **Body:** Tidak ada
-
-#### Response Sukses (200 OK)
-```json
-{
-  "success": true,
-  "data": {
-    "id": 2,
-    "name": "Budi Santoso",
-    "email": "budi@example.com",
-    "role": "user",
-    "avatar_url": null,
-    "created_at": "2026-10-22T04:15:30.000Z"
-  }
-}
-```
-
----
-
-### `PUT /users/me`
-Memperbarui informasi profil pengguna yang sedang login.
-
-- **Akses:** User & Admin (JWT required)
-- **Headers:** `Authorization: Bearer <token>`, `Content-Type: application/json`
-- **Request Body JSON:**
-  ```json
-  {
-    "name": "Budi Santoso Update"
-  }
-  ```
-
-#### Response Sukses (200 OK)
-```json
-{
-  "success": true,
-  "message": "Profile updated successfully",
-  "data": {
-    "id": 2,
-    "name": "Budi Santoso Update",
-    "email": "budi@example.com",
-    "role": "user",
-    "avatar_url": null
-  }
-}
-```
-
----
-
-### `POST /users/me/avatar`
-Mengunggah gambar profil ke Cloudinary dan memperbarui `avatar_url` serta `avatar_public_id`.
-
-- **Akses:** User & Admin (JWT required)
-- **Headers:**
-  - `Authorization: Bearer <token>`
-  - `Content-Type: multipart/form-data`
-- **Form Data:**
-  - `avatar`: File gambar (JPG/PNG/WEBP, maks. 2MB - 5MB)
-
-#### Response Sukses (200 OK)
-```json
-{
-  "success": true,
-  "message": "Avatar uploaded successfully",
-  "data": {
-    "avatar_url": "https://res.cloudinary.com/.../image/upload/.../avatar.jpg"
-  }
-}
-```
-
----
-
 ## 5. Respon Error Global
 
-API dilengkapi middleware terpusat untuk menangani kondisi error umum:
+Middleware terpusat menangani skenario kegagalan umum:
 
 ### Route Tidak Ditemukan (404 Not Found)
-Terjadi jika memanggil URL endpoint atau HTTP Method yang tidak terdaftar.
+HTTP method atau rute tidak terdaftar.
 ```json
 {
   "success": false,
@@ -393,8 +450,8 @@ Terjadi jika memanggil URL endpoint atau HTTP Method yang tidak terdaftar.
 }
 ```
 
-### Syntax JSON Tidak Valid (400 Bad Request)
-Terjadi jika request body mengandung payload JSON cacat (malformed JSON).
+### Format JSON Cacat (400 Bad Request)
+Request body bukan JSON valid.
 ```json
 {
   "success": false,
@@ -402,8 +459,8 @@ Terjadi jika request body mengandung payload JSON cacat (malformed JSON).
 }
 ```
 
-### Server Error Internal (500 Internal Server Error)
-Terjadi jika terjadi kegagalan sistem internal pada database atau server.
+### Kesalahan Server Internal (500 Internal Server Error)
+Kegagalan tak terduga pada server atau database.
 ```json
 {
   "success": false,

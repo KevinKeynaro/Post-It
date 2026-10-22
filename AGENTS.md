@@ -159,10 +159,13 @@ Done
 - `src/middleWares/isAdmin.js` (guard role admin 403 "Admin access required")
 - Admin routes & controller (`GET /admin/users`, `GET /admin/users/:id`, `DELETE /admin/users/:id`), kolom password & avatar_public_id excluded, proteksi admin delete self, handling id via query prepared statement (404 bila tidak cocok), di-mount di `/admin`
 - Rute pengujian sementara telah dibersihkan dari `src/app.js`
+- Cloudinary config & upload helper (`src/config/cloudinary.js`), Multer upload middleware (`src/middleWares/upload.js`)
+- `POST /users/me/avatar` (`src/controllers/user.controller.js` & `src/routes/user.routes.js`), di-mount di `/users` pada `src/app.js`
+- `GET /users/me` (`src/controllers/user.controller.js` & `src/routes/user.routes.js`), kolom password & avatar_public_id excluded
 
 Next steps
-1. User routes (`GET /users/me`, `PUT /users/me`, dll.)
-2. Cloudinary config, `multer` upload middleware, avatar/image endpoint
+1. Remaining user routes (`PUT /users/me`, `DELETE /users/me`)
+2. Cloudinary deletion in admin delete user
 3. Test everything in Postman
 
 ## Testing

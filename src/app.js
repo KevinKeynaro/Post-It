@@ -3,6 +3,7 @@ const express = require("express");
 require("./db/connection"); // inisialisasi koneksi MySQL
 
 const authRoutes = require("./routes/auth.routes");
+const userRoutes = require("./routes/user.routes");
 const adminRoutes = require("./routes/admin.routes");
 const notFound = require("./middleWares/notFound");
 const errorHandler = require("./middleWares/errorHandler");
@@ -23,6 +24,7 @@ app.get("/health", (req, res) => {
 
 // Routes
 app.use("/auth", authRoutes);
+app.use("/users", userRoutes);
 app.use("/admin", adminRoutes);
 
 // Handler 404 jika route tidak ditemukan
