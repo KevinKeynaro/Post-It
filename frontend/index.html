@@ -3,10 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Post It</title>
   </head>
   <body>
     <div id="app"></div>
+    
     <script type="module" src="/src/main.js"></script>
+    <script type="module">
+      async function GetData() {
+        try {
+          const response = await fetch("/api/health");
+          const data = await response.json();
+          console.log(data);
+        } catch (error) {
+          console.error("GetData error:", error);
+        }
+      }
+      GetData();
+    </script>
   </body>
 </html>
